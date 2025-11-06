@@ -1,9 +1,8 @@
 import os
+import sys
 import time
 import base64
-import json
-import re
-import unicodedata
+import argparse
 from pathlib import Path
 from difflib import SequenceMatcher
 from openai import AzureOpenAI
@@ -18,9 +17,6 @@ load_dotenv()
 AZURE_API_KEY = os.getenv("AZURE_API_KEY")
 AZURE_ENDPOINT = os.getenv("AZURE_ENDPOINT", "https://draftspeechtotext.cognitiveservices.azure.com")
 DATA_ROOT = Path(os.getenv("AUDIO_DATA_DIR", "data/processed")).expanduser()
-NORMALIZATION_CONFIG_PATH = Path(
-    os.getenv("NORMALIZATION_CONFIG", "config/normalization.json")
-).expanduser()
 
 if not AZURE_API_KEY:
     raise EnvironmentError(
@@ -61,53 +57,9 @@ ACTIVE_MODELS = [
     "gpt-4o-audio-preview",
 ]
 
-def load_normalization_rules():
-    """Load normalization configuration from disk."""
-    if NORMALIZATION_CONFIG_PATH.exists():
-        try:
-            with NORMALIZATION_CONFIG_PATH.open("r", encoding="utf-8") as f:
-                data = json.load(f)
-                if isinstance(data, dict):
-                    data.setdefault("replacements", [])
-                    return data
-        except Exception as exc:
-            print(f"⚠️  Failed to load normalization config: {exc}")
-    return {"replacements": []}
-
-NORMALIZATION_RULES = load_normalization_rules()
-
-def strip_accents(text):
-    """Remove accent marks from text."""
-    return "".join(
-        ch for ch in unicodedata.normalize("NFD", text)
-        if unicodedata.category(ch) != "Mn"
-    )
-
 def normalize_text(text):
-    """Canonicalize transcription text using configured rules."""
-    normalized = unicodedata.normalize("NFKC", text)
-    normalized = normalized.replace("\u00a0", " ")
-    for ch in ("’", "‘", "`", "´"):
-        normalized = normalized.replace(ch, "'")
-    for ch in ("“", "”", "„"):
-        normalized = normalized.replace(ch, "\"")
-    normalized = normalized.lower() if NORMALIZATION_RULES.get("lowercase", True) else normalized
-    
-    for rule in NORMALIZATION_RULES.get("replacements", []):
-        pattern = rule.get("pattern")
-        replacement = rule.get("replacement", "")
-        if pattern:
-            normalized = re.sub(pattern, replacement, normalized)
-    
-    if NORMALIZATION_RULES.get("strip_accents"):
-        normalized = strip_accents(normalized)
-    
-    if NORMALIZATION_RULES.get("remove_punctuation", True):
-        normalized = re.sub(r"(?<!\d)[.,!?;:]+", " ", normalized)
-        normalized = re.sub(r"\.(?=\s|$)", " ", normalized)
-    
-    normalized = re.sub(r"\s+", " ", normalized).strip()
-    return normalized
+    """Lower-case text to ignore capitalization differences."""
+    return text.lower()
 
 def discover_test_cases():
     """Pair each WAV file with its matching reference transcript."""
@@ -127,6 +79,55 @@ def discover_test_cases():
             continue
         cases.append((audio_path, reference_path))
     return cases
+
+def _normalize_selection_value(value):
+    tokens = set()
+    raw = value.strip().lower()
+    if not raw:
+        return tokens
+    tokens.add(raw)
+    path = Path(value)
+    tokens.add(path.name.lower())
+    tokens.add(path.stem.lower())
+    parts = path.stem.lower().split("_")
+    if len(parts) >= 2:
+        tokens.add("_".join(parts[:2]))
+    return tokens
+
+def _case_keys(audio_path, reference_path):
+    keys = {
+        audio_path.name.lower(),
+        audio_path.stem.lower(),
+        str(audio_path).lower(),
+        reference_path.name.lower(),
+        reference_path.stem.lower(),
+        str(reference_path).lower(),
+    }
+    for stem in (audio_path.stem, reference_path.stem):
+        parts = stem.lower().split("_")
+        if len(parts) >= 2:
+            keys.add("_".join(parts[:2]))
+    return keys
+
+def filter_test_cases(cases, selections):
+    """Filter discovered cases based on user selections."""
+    if not selections:
+        return cases, []
+    
+    selection_keys = set()
+    for value in selections:
+        selection_keys.update(_normalize_selection_value(value))
+    
+    filtered = []
+    matched_keys = set()
+    for audio_path, reference_path in cases:
+        keys = _case_keys(audio_path, reference_path)
+        if keys & selection_keys:
+            filtered.append((audio_path, reference_path))
+            matched_keys.update(keys & selection_keys)
+    
+    unmatched = sorted(selection_keys - matched_keys)
+    return filtered, unmatched
 
 def test_whisper(audio_path):
     """Test Whisper (simple file upload)."""
@@ -376,12 +377,48 @@ def generate_report(test_cases, all_results, output_path="reports/stt_report.md"
     print(f"\n📝 Detailed report written to {report_path}")
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Benchmark Azure speech transcription models against reference transcripts."
+    )
+    parser.add_argument(
+        "-a",
+        "--audio",
+        nargs="+",
+        help="Run only the specified audio files (accepts names, stems, or paths).",
+    )
+    parser.add_argument(
+        "--list",
+        action="store_true",
+        help="List available audio/reference pairs and exit.",
+    )
+    parser.add_argument(
+        "--skip-report",
+        action="store_true",
+        help="Skip writing the detailed markdown report.",
+    )
+    args = parser.parse_args()
+    
     all_results = []
     cases = discover_test_cases()
     test_cases = []
     
+    if args.list:
+        print("Available test cases:")
+        for audio_path, reference_path in cases:
+            print(f"- {audio_path.name}  (reference: {reference_path.name})")
+        sys.exit(0)
+    
+    if args.audio:
+        cases, unmatched = filter_test_cases(cases, args.audio)
+        if unmatched:
+            print(f"⚠️  No matches found for selections: {', '.join(unmatched)}")
+        if not cases:
+            print("⚠️  No test cases remain after filtering. Exiting.")
+            sys.exit(1)
+    
     if not cases:
         print(f"⚠️  No test cases found in {DATA_ROOT}")
+        sys.exit(1)
     
     for audio_path, reference_path in cases:
         reference_text = reference_path.read_text(encoding="utf-8").strip()
@@ -395,6 +432,7 @@ if __name__ == "__main__":
     
     if all_results:
         print_results(all_results)
-        generate_report(test_cases, all_results, output_path="reports/stt_report_normalized.md")
+        if not args.skip_report:
+            generate_report(test_cases, all_results, output_path="reports/stt_report_normalized.md")
     
     print("\nℹ️  GPT Realtime testing is not automated because the realtime API requires a websocket session, which this script does not yet establish.")
