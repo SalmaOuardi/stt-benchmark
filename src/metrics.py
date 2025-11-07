@@ -8,6 +8,9 @@ from typing import Dict, List, Tuple
 
 from jiwer import wer
 
+import config
+from llm_normalization import normalize_with_llm
+
 
 def normalize_text(text: str) -> str:
     """
@@ -84,31 +87,58 @@ def summarize_errors(
 
 def add_normalized_metrics(result: Dict, reference_text: str) -> Dict:
     """
-    Add normalized WER and error metrics to a result dictionary.
+    Calculate meaningful WER using LLM-based intelligent normalization.
+
+    This replaces the raw WER with a normalized WER that only counts
+    semantic differences, not formatting variations. The normalized WER
+    becomes the primary WER metric.
 
     Args:
         result: Result dictionary from transcription test
         reference_text: Original reference text
 
     Returns:
-        Updated result dictionary with normalized metrics
+        Updated result dictionary with normalized metrics as primary WER
     """
     if not result.get("success"):
         return result
 
-    normalized_reference = normalize_text(reference_text)
-    normalized_transcript = normalize_text(result["transcript"])
+    # Store original WER as "raw_wer" for reference
+    result["raw_wer"] = result.get("wer", 0)
+    result["raw_errors"] = result.get("errors", {})
+    result["raw_error_details"] = result.get("error_details", [])
 
-    result["normalized_reference"] = normalized_reference
-    result["normalized_transcript"] = normalized_transcript
-    result["normalized_wer"] = calculate_wer(normalized_reference, normalized_transcript)
+    # Use LLM normalization if enabled
+    if config.USE_LLM_NORMALIZATION:
+        try:
+            normalized_reference, normalized_transcript = normalize_with_llm(
+                reference_text,
+                result["transcript"],
+                config.AZURE_API_KEY,
+                config.MISTRAL_ENDPOINT
+            )
+        except Exception as e:
+            print(f"⚠️  LLM normalization failed, using basic normalization: {e}")
+            normalized_reference = normalize_text(reference_text)
+            normalized_transcript = normalize_text(result["transcript"])
+    else:
+        normalized_reference = normalize_text(reference_text)
+        normalized_transcript = normalize_text(result["transcript"])
 
-    normalized_errors, normalized_error_details = summarize_errors(
+    # Calculate the meaningful WER
+    meaningful_wer = calculate_wer(normalized_reference, normalized_transcript)
+    meaningful_errors, meaningful_error_details = summarize_errors(
         normalized_reference,
         normalized_transcript
     )
 
-    result["normalized_errors"] = normalized_errors
-    result["normalized_error_details"] = normalized_error_details
+    # Replace primary WER with meaningful WER
+    result["wer"] = meaningful_wer
+    result["errors"] = meaningful_errors
+    result["error_details"] = meaningful_error_details
+
+    # Store normalized texts for debugging
+    result["normalized_reference"] = normalized_reference
+    result["normalized_transcript"] = normalized_transcript
 
     return result

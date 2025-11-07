@@ -61,3 +61,11 @@ TRANSCRIPTION_PROMPT = "Transcribe this French audio exactly. Return only the tr
 
 # Rate limiting delay between API calls (seconds)
 RATE_LIMIT_DELAY = 1
+
+# Mistral configuration for LLM-based normalization
+# Using the correct Azure OpenAI format with deployment name
+MISTRAL_DEPLOYMENT = "mistral-small-2503"
+MISTRAL_ENDPOINT = f"{AZURE_ENDPOINT}/openai/deployments/{MISTRAL_DEPLOYMENT}/chat/completions?api-version=2024-05-01-preview"
+
+# Enable LLM-based normalization for more accurate WER calculation
+USE_LLM_NORMALIZATION = os.getenv("USE_LLM_NORMALIZATION", "true").lower() == "true"

@@ -17,7 +17,10 @@ def list_test_cases() -> None:
     cases = discover_test_cases()
     print("Available test cases:")
     for audio_path, reference_path in cases:
-        print(f"- {audio_path.name}  (reference: {reference_path.name})")
+        if reference_path:
+            print(f"- {audio_path.name}  (reference: {reference_path.name})")
+        else:
+            print(f"- {audio_path.name}  (transcription only - no reference)")
 
 
 def run_benchmark(audio_selections: List[str] = None, skip_report: bool = False) -> None:
@@ -51,7 +54,11 @@ def run_benchmark(audio_selections: List[str] = None, skip_report: bool = False)
     test_cases: List[Dict[str, Any]] = []
 
     for audio_path, reference_path in cases:
-        reference_text = reference_path.read_text(encoding="utf-8").strip()
+        # Check if we have a reference for evaluation or just transcription
+        if reference_path:
+            reference_text = reference_path.read_text(encoding="utf-8").strip()
+        else:
+            reference_text = None
 
         # Run tests for all models on this audio file
         results = test_all_models(audio_path, reference_text)

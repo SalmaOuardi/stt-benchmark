@@ -1,20 +1,24 @@
 """
 Test case discovery and filtering module.
 Handles pairing audio files with reference transcripts and filtering based on user selections.
+Supports both evaluation mode (with references) and transcription-only mode (without references).
 """
 
 from pathlib import Path
-from typing import List, Tuple, Set
+from typing import List, Tuple, Set, Optional
 
 from config import DATA_ROOT
 
 
-def discover_test_cases() -> List[Tuple[Path, Path]]:
+def discover_test_cases() -> List[Tuple[Path, Optional[Path]]]:
     """
-    Pair each WAV file with its matching reference transcript.
+    Pair each WAV file with its matching reference transcript, if available.
+
+    Audio files without reference transcripts will be included for transcription-only mode.
+    Searches both in DATA_ROOT and its subdirectories.
 
     Returns:
-        List of tuples containing (audio_path, reference_path)
+        List of tuples containing (audio_path, reference_path or None)
 
     Raises:
         FileNotFoundError: If the DATA_ROOT directory doesn't exist
@@ -23,20 +27,28 @@ def discover_test_cases() -> List[Tuple[Path, Path]]:
         raise FileNotFoundError(f"Audio data directory not found: {DATA_ROOT}")
 
     cases = []
-    for audio_path in sorted(DATA_ROOT.glob("audio_*.wav")):
-        parts = audio_path.stem.split("_")
-        if len(parts) < 2:
-            print(f"⚠️  Skipping unexpected file name: {audio_path.name}")
-            continue
 
-        base_name = "_".join(parts[:2])
-        reference_path = audio_path.with_name(f"{base_name}_reference.txt")
+    # Find all .wav files in DATA_ROOT and subdirectories
+    for audio_path in sorted(DATA_ROOT.rglob("*.wav")):
+        # Check if it matches the audio_XX pattern
+        if audio_path.stem.startswith("audio_"):
+            parts = audio_path.stem.split("_")
+            if len(parts) < 2:
+                print(f"⚠️  Skipping unexpected file name: {audio_path.name}")
+                continue
 
-        if not reference_path.exists():
-            print(f"⚠️  Reference file missing for {audio_path.name}")
-            continue
+            base_name = "_".join(parts[:2])
+            reference_path = audio_path.with_name(f"{base_name}_reference.txt")
 
-        cases.append((audio_path, reference_path))
+            if not reference_path.exists():
+                print(f"ℹ️  No reference for {audio_path.name} - transcription only")
+                cases.append((audio_path, None))
+            else:
+                cases.append((audio_path, reference_path))
+        else:
+            # Audio file without audio_XX prefix - transcription only
+            print(f"ℹ️  Found {audio_path.relative_to(DATA_ROOT)} - transcription only")
+            cases.append((audio_path, None))
 
     return cases
 
@@ -69,13 +81,13 @@ def _normalize_selection_value(value: str) -> Set[str]:
     return tokens
 
 
-def _case_keys(audio_path: Path, reference_path: Path) -> Set[str]:
+def _case_keys(audio_path: Path, reference_path: Optional[Path]) -> Set[str]:
     """
     Generate all possible matching keys for a test case.
 
     Args:
         audio_path: Path to audio file
-        reference_path: Path to reference transcript
+        reference_path: Path to reference transcript (or None)
 
     Returns:
         Set of normalized keys that could identify this test case
@@ -84,13 +96,21 @@ def _case_keys(audio_path: Path, reference_path: Path) -> Set[str]:
         audio_path.name.lower(),
         audio_path.stem.lower(),
         str(audio_path).lower(),
-        reference_path.name.lower(),
-        reference_path.stem.lower(),
-        str(reference_path).lower(),
     }
 
-    for stem in (audio_path.stem, reference_path.stem):
-        parts = stem.lower().split("_")
+    if reference_path:
+        keys.update({
+            reference_path.name.lower(),
+            reference_path.stem.lower(),
+            str(reference_path).lower(),
+        })
+
+        for stem in (audio_path.stem, reference_path.stem):
+            parts = stem.lower().split("_")
+            if len(parts) >= 2:
+                keys.add("_".join(parts[:2]))
+    else:
+        parts = audio_path.stem.lower().split("_")
         if len(parts) >= 2:
             keys.add("_".join(parts[:2]))
 
@@ -98,14 +118,14 @@ def _case_keys(audio_path: Path, reference_path: Path) -> Set[str]:
 
 
 def filter_test_cases(
-    cases: List[Tuple[Path, Path]],
+    cases: List[Tuple[Path, Optional[Path]]],
     selections: List[str]
-) -> Tuple[List[Tuple[Path, Path]], List[str]]:
+) -> Tuple[List[Tuple[Path, Optional[Path]]], List[str]]:
     """
     Filter discovered cases based on user selections.
 
     Args:
-        cases: List of (audio_path, reference_path) tuples
+        cases: List of (audio_path, reference_path or None) tuples
         selections: List of user-provided selection strings
 
     Returns:
