@@ -5,33 +5,32 @@ A professional benchmarking framework for evaluating Azure OpenAI speech-to-text
 ## Features
 
 - **Automated Test Discovery** – Automatically pairs audio files with reference transcripts from your dataset directory
-- **Multi-Model Support** – Benchmarks multiple Azure OpenAI models (`gpt-audio`, `gpt-audio-mini`, `gpt-4o-audio-preview`) in a single run
-- **Comprehensive Metrics** – Calculates WER (both raw and normalized), latency, and detailed error analysis (substitutions, insertions, deletions)
-- **Professional Reporting** – Generates console summaries and detailed Markdown reports with per-file, per-model breakdowns
+- **Multi-Model Support** – Benchmarks multiple Azure OpenAI models including:
+  - Chat-based models: `gpt-audio`, `gpt-audio-mini`, `gpt-4o-audio-preview`
+  - Transcription models: `gpt-4o-transcribe`, `gpt-4o-mini-transcribe`
+- **Comprehensive Metrics** – Calculates raw WER, latency, and detailed error analysis (substitutions, insertions, deletions)
+- **Professional Reporting** – Generates executive summaries with model rankings, comparison tables, and detailed per-sample breakdowns
+- **Detailed Error Analysis** – Shows exactly which words were substituted, inserted, or deleted for each model
 - **Flexible CLI** – Target specific audio files, list available samples, or skip report generation with command-line options
 - **Modular Architecture** – Clean, maintainable codebase with separate modules for configuration, testing, metrics, and reporting
-- **Audio Preparation Utility** – Helper script to convert and standardize audio recordings
 
 ## Project Structure
 
 ```
 .
-├── data/processed/           # Audio samples and reference transcripts
+├── data/
+│   └── off/processed/        # Official test audio samples and references
 ├── reports/                  # Generated benchmark reports
-├── scripts/
-│   └── convert_audio.sh      # Audio file conversion utility
 ├── src/                      # Source code (modular architecture)
-│   ├── config.py             # Configuration and environment setup
+│   ├── config.py             # Configuration and model definitions
 │   ├── test_discovery.py     # Test case discovery and filtering
-│   ├── transcription.py      # API communication layer
+│   ├── transcription.py      # API communication for both chat and transcription models
 │   ├── metrics.py            # WER calculation and error analysis
-│   ├── reporting.py          # Results display and report generation
+│   ├── reporting.py          # Comprehensive benchmark report generation
 │   ├── runner.py             # Test orchestration
-│   ├── main.py               # Main entry point with CLI
-│   └── test_models.py        # Legacy entry point (backward compatible)
-├── .env.example              # Environment variables template
+│   └── main.py               # Main entry point with CLI
+├── .env                      # Environment variables (not in git)
 ├── pyproject.toml            # Project dependencies and metadata
-├── ARCHITECTURE.md           # Detailed architecture documentation
 └── README.md                 # This file
 ```
 
@@ -71,15 +70,15 @@ A professional benchmarking framework for evaluating Azure OpenAI speech-to-text
 
 4. **Prepare your dataset:**
    ```
-   data/processed/
-   ├── audio_01_clean.wav
-   ├── audio_01_reference.txt
-   ├── audio_02_technical.wav
-   ├── audio_02_reference.txt
+   data/off/processed/
+   ├── audio_clean.wav
+   ├── audio_clean_reference.txt
+   ├── audio_noisy.wav
+   ├── audio_noisy_reference.txt
    └── ...
    ```
 
-   Each `audio_*.wav` file must have a corresponding `*_reference.txt` file with the ground truth transcript.
+   Each `audio_*.wav` file must have a corresponding `audio_*_reference.txt` file with the ground truth transcript.
 
 ## Usage
 
@@ -87,22 +86,22 @@ A professional benchmarking framework for evaluating Azure OpenAI speech-to-text
 
 **Run all benchmarks:**
 ```bash
-python src/main.py
+python -m src.main
 ```
 
 **List available test cases:**
 ```bash
-python src/main.py --list
+python -m src.main --list
 ```
 
 **Test specific audio files:**
 ```bash
-python src/main.py --audio audio_01_clean audio_05_safety
+python -m src.main --audio audio_clean audio_noisy
 ```
 
 **Skip report generation:**
 ```bash
-python src/main.py --skip-report
+python -m src.main --skip-report
 ```
 
 ### CLI Options
@@ -117,25 +116,39 @@ python src/main.py --skip-report
 
 **Console Summary:**
 ```
-📊 BENCHMARK RESULTS
-============================================================
+================================================================================
+📊 BENCHMARK RESULTS - MODEL COMPARISON
+================================================================================
 
-Model                Avg WER      Norm WER     Avg Latency
-------------------------------------------------------------
-gpt-audio             12.45%        10.23%        2.34s
-gpt-audio-mini        15.67%        13.12%        1.89s
-gpt-4o-audio-preview   9.23%         7.45%        3.12s
+Model                     Avg WER    Latency      Errors     Status
+--------------------------------------------------------------------------------
+gpt-4o-mini-transcribe    5.84%        1.72s    9          ✅ 2
+gpt-audio-mini            7.79%        3.85s    12         ✅ 2
+gpt-4o-audio-preview      8.44%        1.83s    13         ✅ 2
+gpt-4o-transcribe         9.09%        2.68s    14         ✅ 2
+gpt-audio                 12.99%       2.45s    20         ✅ 2
 
-🏆 WINNER: gpt-4o-audio-preview (Lowest WER)
+================================================================================
+🏆 BEST MODEL: gpt-4o-mini-transcribe
+   Average WER: 5.84%
+   Average Latency: 1.72s
+   Total Errors: 9
+================================================================================
 ```
 
 **Markdown Report:**
-A detailed report is generated at `reports/stt_report_normalized.md` containing:
-- Per-file, per-model transcription results
-- Word Error Rate (raw and normalized)
-- Detailed error analysis (substitutions, insertions, deletions)
-- Latency measurements
-- Side-by-side comparison of reference vs. transcribed text
+A comprehensive benchmark report is generated at `reports/stt_report_normalized.md` containing:
+
+**Executive Summary:**
+- Model performance comparison table (ranked by WER)
+- Best model announcement with key metrics
+- Error type breakdown (substitutions, insertions, deletions)
+
+**Detailed Results:**
+- Per-audio sample analysis
+- Side-by-side model comparison tables
+- Full transcripts from each model
+- Detailed error analysis showing exact mismatches
 
 ## Advanced Usage
 
@@ -148,7 +161,7 @@ MODELS = {
     "your-new-model": {
         "url": f"{AZURE_ENDPOINT}/openai/deployments/your-model/...",
         "deployment": "your-model",
-        "type": "chat",
+        "type": "chat",  # or "transcription" for audio transcription models
         "api_version": "2025-01-01-preview",
     }
 }
@@ -156,9 +169,15 @@ MODELS = {
 ACTIVE_MODELS = [
     "gpt-audio",
     "gpt-audio-mini",
+    "gpt-4o-transcribe",
+    "gpt-4o-mini-transcribe",
     "your-new-model",  # Add here
 ]
 ```
+
+**Model Types:**
+- `"chat"` - For chat-based audio models (uses chat completions API)
+- `"transcription"` - For dedicated transcription models (uses audio transcriptions API)
 
 ### Using as a Library
 
@@ -195,33 +214,32 @@ def calculate_custom_metric(reference: str, hypothesis: str) -> float:
     return score
 ```
 
-## Audio Preparation
+## Data Preparation
 
-Convert `.m4a` recordings to standardized WAV format:
+### Audio Format Requirements
 
-```bash
-bash scripts/convert_audio.sh
-```
+- **Format:** WAV (16 kHz, mono recommended)
+- **Naming:** `audio_*.wav` (e.g., `audio_clean.wav`, `audio_noisy.wav`)
+- **Location:** `data/off/processed/`
 
-This script:
-- Converts audio to 16 kHz mono WAV format
-- Assigns consistent naming patterns
-- Outputs to `test_audio/` for review
-- Ready for moving to `data/processed/`
+### Reference Transcripts
+
+- **Format:** Plain text (.txt)
+- **Naming:** Must match audio file with `_reference` suffix (e.g., `audio_clean_reference.txt`)
+- **Content:** Exact transcription of the audio file
+- **Location:** Same directory as audio files
 
 ## Architecture
 
 The project uses a modular architecture for maintainability and extensibility:
 
-- **config.py** – Centralized configuration, environment variables, and model definitions
-- **test_discovery.py** – Discovers and filters audio/transcript pairs
-- **transcription.py** – Handles all API communication with Azure OpenAI
-- **metrics.py** – Calculates WER and analyzes transcription errors
-- **reporting.py** – Generates console output and detailed Markdown reports
+- **config.py** – Centralized configuration with model definitions and API endpoints
+- **test_discovery.py** – Automatically discovers and pairs audio files with references
+- **transcription.py** – Handles API communication for both chat and transcription models
+- **metrics.py** – Calculates raw WER and performs detailed error analysis
+- **reporting.py** – Generates comprehensive benchmark reports with executive summaries
 - **runner.py** – Orchestrates test execution across multiple models
-- **main.py** – Entry point with argument parsing and workflow coordination
-
-For detailed architecture documentation, see [ARCHITECTURE.md](ARCHITECTURE.md).
+- **main.py** – Entry point with CLI argument parsing
 
 ## Configuration
 
@@ -231,7 +249,6 @@ For detailed architecture documentation, see [ARCHITECTURE.md](ARCHITECTURE.md).
 |----------|----------|---------|-------------|
 | `AZURE_API_KEY` | Yes | – | Your Azure OpenAI API key |
 | `AZURE_ENDPOINT` | No | `https://draftspeechtotext...` | Azure OpenAI endpoint URL |
-| `AUDIO_DATA_DIR` | No | `data/processed` | Directory containing audio files and transcripts |
 
 ### Model Configuration
 
@@ -239,7 +256,14 @@ Models are configured in [src/config.py](src/config.py). Each model requires:
 - Deployment name
 - API endpoint URL
 - API version
-- Model type (whisper or chat)
+- Model type (`"chat"` or `"transcription"`)
+
+### Test Configuration
+
+The framework is configured to:
+- Use only `data/off/processed/` directory for audio samples
+- Calculate raw WER (no normalization)
+- Test 5 models: gpt-audio, gpt-audio-mini, gpt-4o-transcribe, gpt-4o-mini-transcribe, gpt-4o-audio-preview
 
 ## Metrics & Analysis
 
@@ -250,7 +274,7 @@ The primary metric for transcription quality:
 WER = (Substitutions + Insertions + Deletions) / Total Reference Words
 ```
 
-Both raw and normalized (case-insensitive) WER are calculated.
+Raw WER is calculated by comparing the model's transcript directly against the reference text (case-insensitive).
 
 ### Error Analysis
 
@@ -290,12 +314,29 @@ source .venv/bin/activate  # Linux/Mac
 .venv\Scripts\activate     # Windows
 ```
 
+## Benchmark Results
+
+Based on testing with 2 audio samples (clean and noisy):
+
+**🏆 Winner: gpt-4o-mini-transcribe**
+- Average WER: 5.84%
+- Average Latency: 1.72s
+- Best for: Accuracy and speed
+
+**Full Rankings:**
+1. gpt-4o-mini-transcribe: 5.84% WER, 1.72s
+2. gpt-audio-mini: 7.79% WER, 3.85s
+3. gpt-4o-audio-preview: 8.44% WER, 1.83s
+4. gpt-4o-transcribe: 9.09% WER, 2.68s
+5. gpt-audio: 12.99% WER, 2.45s
+
 ## Limitations & Notes
 
 - **GPT Realtime** – Not currently supported (requires websocket session)
-- **Text Normalization** – Only lowercases text; punctuation, numbers, and accents are preserved
+- **Whisper Models** – Removed from testing (focus on OpenAI GPT models only)
+- **Normalization** – Disabled to show true model performance
 - **Audio Length** – Ensure audio files comply with Azure request size limits
-- **Rate Limiting** – 1-second delay between API calls to avoid rate limits (configurable in [src/config.py](src/config.py))
+- **Rate Limiting** – 1-second delay between API calls (configurable in [src/config.py](src/config.py))
 
 ## Contributing
 
@@ -305,18 +346,16 @@ The modular architecture makes contributions straightforward:
 - New models: Update configuration
 - New metrics: Extend metrics module
 
-## Documentation
+## Summary
 
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** – Detailed module descriptions and design principles
-- **[REFACTORING_SUMMARY.md](REFACTORING_SUMMARY.md)** – Architecture benefits and usage examples
-- **[MODULE_DEPENDENCIES.md](MODULE_DEPENDENCIES.md)** – Dependency graph and data flow diagrams
+This benchmark framework provides a clear, objective comparison of Azure OpenAI speech-to-text models. The comprehensive reports help you make informed decisions about which model best fits your use case based on accuracy, speed, and error characteristics.
 
-## License
-
-This project is provided as-is for benchmarking and evaluation purposes.
+**Key Takeaways:**
+- **gpt-4o-mini-transcribe** offers the best balance of accuracy and speed
+- All models handle clean audio better than noisy audio
+- Transcription models are generally faster than chat-based models
+- Detailed error analysis helps identify specific model weaknesses
 
 ---
 
-**Questions or feedback?** Please refer to the architecture documentation or open an issue.
-
-Happy benchmarking! 🎤📊
+**Ready to benchmark your models?** Run `python -m src.main` to get started! 🎤📊
