@@ -7,7 +7,7 @@ Supports both evaluation mode (with references) and transcription-only mode (wit
 from pathlib import Path
 from typing import List, Tuple, Set, Optional
 
-from config import DATA_ROOT
+from config import DATA_ROOTS
 
 
 def discover_test_cases() -> List[Tuple[Path, Optional[Path]]]:
@@ -15,40 +15,48 @@ def discover_test_cases() -> List[Tuple[Path, Optional[Path]]]:
     Pair each WAV file with its matching reference transcript, if available.
 
     Audio files without reference transcripts will be included for transcription-only mode.
-    Searches both in DATA_ROOT and its subdirectories.
+    Searches in all DATA_ROOTS directories (e.g., data/mine/processed, data/off/processed).
 
     Returns:
         List of tuples containing (audio_path, reference_path or None)
 
     Raises:
-        FileNotFoundError: If the DATA_ROOT directory doesn't exist
+        FileNotFoundError: If no data directories exist
     """
-    if not DATA_ROOT.exists():
-        raise FileNotFoundError(f"Audio data directory not found: {DATA_ROOT}")
+    if not DATA_ROOTS:
+        raise FileNotFoundError("No audio data directories configured")
 
     cases = []
 
-    # Find all .wav files in DATA_ROOT and subdirectories
-    for audio_path in sorted(DATA_ROOT.rglob("*.wav")):
-        # Check if it matches the audio_XX pattern
-        if audio_path.stem.startswith("audio_"):
-            parts = audio_path.stem.split("_")
-            if len(parts) < 2:
-                print(f"⚠️  Skipping unexpected file name: {audio_path.name}")
-                continue
+    # Find all .wav files in all DATA_ROOTS directories
+    for data_root in DATA_ROOTS:
+        if not data_root.exists():
+            print(f"⚠️  Data directory not found: {data_root}")
+            continue
 
-            base_name = "_".join(parts[:2])
-            reference_path = audio_path.with_name(f"{base_name}_reference.txt")
+        print(f"🔍 Searching in: {data_root}")
 
-            if not reference_path.exists():
-                print(f"ℹ️  No reference for {audio_path.name} - transcription only")
-                cases.append((audio_path, None))
+        # Find all .wav files in this data root and subdirectories
+        for audio_path in sorted(data_root.rglob("*.wav")):
+            # Check if it matches the audio_XX pattern
+            if audio_path.stem.startswith("audio_"):
+                parts = audio_path.stem.split("_")
+                if len(parts) < 2:
+                    print(f"⚠️  Skipping unexpected file name: {audio_path.name}")
+                    continue
+
+                base_name = "_".join(parts[:2])
+                reference_path = audio_path.with_name(f"{base_name}_reference.txt")
+
+                if not reference_path.exists():
+                    print(f"ℹ️  No reference for {audio_path.name} - transcription only")
+                    cases.append((audio_path, None))
+                else:
+                    cases.append((audio_path, reference_path))
             else:
-                cases.append((audio_path, reference_path))
-        else:
-            # Audio file without audio_XX prefix - transcription only
-            print(f"ℹ️  Found {audio_path.relative_to(DATA_ROOT)} - transcription only")
-            cases.append((audio_path, None))
+                # Audio file without audio_XX prefix - transcription only
+                print(f"ℹ️  Found {audio_path.relative_to(data_root)} - transcription only")
+                cases.append((audio_path, None))
 
     return cases
 

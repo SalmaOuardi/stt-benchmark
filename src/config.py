@@ -13,7 +13,25 @@ load_dotenv()
 # Azure OpenAI configuration
 AZURE_API_KEY = os.getenv("AZURE_API_KEY")
 AZURE_ENDPOINT = os.getenv("AZURE_ENDPOINT", "https://draftspeechtotext.cognitiveservices.azure.com")
-DATA_ROOT = Path(os.getenv("AUDIO_DATA_DIR", "data/processed")).expanduser()
+
+# Data directories - supports multiple subdirectories
+# Searches in all "processed" folders under the data root
+DATA_ROOT_BASE = Path(os.getenv("AUDIO_DATA_DIR", "data")).expanduser()
+
+# Automatically discover all processed directories
+DATA_ROOTS = []
+if DATA_ROOT_BASE.exists():
+    # Look for all "processed" subdirectories
+    for processed_dir in DATA_ROOT_BASE.rglob("processed"):
+        if processed_dir.is_dir():
+            DATA_ROOTS.append(processed_dir)
+
+# Fallback to single directory if specified explicitly or no processed dirs found
+if not DATA_ROOTS:
+    DATA_ROOTS = [DATA_ROOT_BASE / "processed"]
+
+# For backward compatibility, keep DATA_ROOT as the first directory
+DATA_ROOT = DATA_ROOTS[0] if DATA_ROOTS else DATA_ROOT_BASE / "processed"
 
 # Validate required configuration
 if not AZURE_API_KEY:
@@ -41,6 +59,18 @@ MODELS = {
         "type": "chat",
         "api_version": "2025-01-01-preview",
     },
+    "gpt-4o-transcribe": {
+        "url": f"{AZURE_ENDPOINT}/openai/deployments/gpt-4o-transcribe/chat/completions?api-version=2025-01-01-preview",
+        "deployment": "gpt-4o-transcribe",
+        "type": "chat",
+        "api_version": "2025-01-01-preview",
+    },
+    "gpt-4o-mini-transcribe": {
+        "url": f"{AZURE_ENDPOINT}/openai/deployments/gpt-4o-mini-transcribe/chat/completions?api-version=2025-01-01-preview",
+        "deployment": "gpt-4o-mini-transcribe",
+        "type": "chat",
+        "api_version": "2025-01-01-preview",
+    },
     "gpt-4o-audio-preview": {
         "url": f"{AZURE_ENDPOINT}/openai/deployments/gpt-4o-audio-preview/chat/completions?api-version=2025-01-01-preview",
         "deployment": "gpt-4o-audio-preview",
@@ -53,6 +83,8 @@ MODELS = {
 ACTIVE_MODELS = [
     "gpt-audio",
     "gpt-audio-mini",
+    "gpt-4o-transcribe",
+    "gpt-4o-mini-transcribe",
     "gpt-4o-audio-preview",
 ]
 

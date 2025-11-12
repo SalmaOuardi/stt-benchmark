@@ -15,5 +15,11 @@ wheels/
 # Data files
 data/
 
+# Test coverage reports
+htmlcov/
+.coverage
+coverage.xml
+*.cover
+
 # anything else
 .claude

@@ -1,0 +1,60 @@
+2025-11-11 11:49:30 - config_validator - INFO - Validating configuration...
+2025-11-11 11:49:30 - config_validator - INFO - Configuration validation passed
+2025-11-11 11:49:30 - test_discovery - INFO - Found real/clean.wav - transcription only
+2025-11-11 11:49:30 - test_discovery - INFO - Found real/noisy.wav - transcription only
+2025-11-11 11:49:30 - __main__ - INFO - Available test cases:
+2025-11-11 11:49:30 - __main__ - INFO - - clean.wav  (transcription only - no reference)
+2025-11-11 11:49:30 - __main__ - INFO - - noisy.wav  (transcription only - no reference)
+2025-11-11 11:49:30 - __main__ - INFO - - audio_01_clean.wav  (reference: audio_01_reference.txt)
+2025-11-11 11:49:30 - __main__ - INFO - - audio_02_technical.wav  (reference: audio_02_reference.txt)
+2025-11-11 11:49:30 - __main__ - INFO - - audio_03_numbers.wav  (reference: audio_03_reference.txt)
+2025-11-11 11:49:30 - __main__ - INFO - - audio_04_short_notes.wav  (reference: audio_04_reference.txt)
+2025-11-11 11:49:30 - __main__ - INFO - - audio_05_safety.wav  (reference: audio_05_reference.txt)
+2025-11-11 11:49:30 - __main__ - INFO - - audio_06_moderate_noise.wav  (reference: audio_06_reference.txt)
+2025-11-11 11:49:30 - __main__ - INFO - - audio_07_heavy_noise.wav  (reference: audio_07_reference.txt)
+2025-11-11 11:49:30 - __main__ - INFO - - audio_10_long.wav  (reference: audio_10_reference.txt)
+2025-11-11 11:49:41 - config_validator - INFO - Validating configuration...
+2025-11-11 11:49:41 - config_validator - INFO - Configuration validation passed
+2025-11-11 11:49:41 - test_discovery - INFO - Found real/clean.wav - transcription only
+2025-11-11 11:49:41 - test_discovery - INFO - Found real/noisy.wav - transcription only
+2025-11-11 11:49:41 - __main__ - INFO - Available test cases:
+2025-11-11 11:49:41 - __main__ - INFO - - clean.wav  (transcription only - no reference)
+2025-11-11 11:49:41 - __main__ - INFO - - noisy.wav  (transcription only - no reference)
+2025-11-11 11:49:41 - __main__ - INFO - - audio_01_clean.wav  (reference: audio_01_reference.txt)
+2025-11-11 11:49:41 - __main__ - INFO - - audio_02_technical.wav  (reference: audio_02_reference.txt)
+2025-11-11 11:49:41 - __main__ - INFO - - audio_03_numbers.wav  (reference: audio_03_reference.txt)
+2025-11-11 11:49:41 - __main__ - INFO - - audio_04_short_notes.wav  (reference: audio_04_reference.txt)
+2025-11-11 11:49:41 - __main__ - INFO - - audio_05_safety.wav  (reference: audio_05_reference.txt)
+2025-11-11 11:49:41 - __main__ - INFO - - audio_06_moderate_noise.wav  (reference: audio_06_reference.txt)
+2025-11-11 11:49:41 - __main__ - INFO - - audio_07_heavy_noise.wav  (reference: audio_07_reference.txt)
+2025-11-11 11:49:41 - __main__ - INFO - - audio_10_long.wav  (reference: audio_10_reference.txt)
+2025-11-11 11:50:04 - config_validator - INFO - Validating configuration...
+2025-11-11 11:50:04 - config_validator - INFO - Configuration validation passed
+2025-11-11 11:50:04 - test_discovery - INFO - Found real/clean.wav - transcription only
+2025-11-11 11:50:04 - test_discovery - INFO - Found real/noisy.wav - transcription only
+2025-11-11 11:50:04 - runner - INFO - ============================================================
+2025-11-11 11:50:04 - runner - INFO - Testing: data/processed/synth/audio_01_clean.wav
+2025-11-11 11:50:04 - runner - INFO - Reference: Bonjour, je suis chef de chantier sur le site de Vinci Construction.
+
+Aujourd'hui, le 6 novembre 202...
+2025-11-11 11:50:04 - runner - INFO - ============================================================
+2025-11-11 11:50:04 - transcription - INFO - Testing gpt-audio model...
+2025-11-11 11:50:09 - httpx - INFO - HTTP Request: POST https://draftspeechtotext.cognitiveservices.azure.com/openai/deployments/gpt-audio/chat/completions?api-version=2025-01-01-preview "HTTP/1.1 200 OK"
+2025-11-11 11:50:13 - transcription - INFO - Testing gpt-audio-mini model...
+2025-11-11 11:50:17 - httpx - INFO - HTTP Request: POST https://draftspeechtotext.cognitiveservices.azure.com/openai/deployments/gpt-audio-mini/chat/completions?api-version=2025-01-01-preview "HTTP/1.1 200 OK"
+2025-11-11 11:50:22 - transcription - INFO - Testing gpt-4o-audio-preview model...
+2025-11-11 11:50:25 - httpx - INFO - HTTP Request: POST https://draftspeechtotext.cognitiveservices.azure.com/openai/deployments/gpt-4o-audio-preview/chat/completions?api-version=2025-01-01-preview "HTTP/1.1 200 OK"
+2025-11-11 11:50:29 - reporting - INFO - 
+============================================================
+2025-11-11 11:50:29 - reporting - INFO - 📊 BENCHMARK RESULTS
+2025-11-11 11:50:29 - reporting - INFO - ============================================================
+2025-11-11 11:50:29 - reporting - INFO - 
+Model                          WER          Avg Latency    
+2025-11-11 11:50:29 - reporting - INFO - ------------------------------------------------------------
+2025-11-11 11:50:29 - reporting - INFO - gpt-4o-audio-preview             4.72%        2.77s
+2025-11-11 11:50:29 - reporting - INFO - gpt-audio                        3.20%        4.96s
+2025-11-11 11:50:29 - reporting - INFO - gpt-audio-mini                   3.05%        4.61s
+2025-11-11 11:50:29 - reporting - INFO - 
+🏆 WINNER: gpt-audio-mini (Lowest WER)
+2025-11-11 11:50:29 - reporting - INFO - 
+ℹ️  WER calculated using LLM-based normalization (semantic errors only)
