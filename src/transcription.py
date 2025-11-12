@@ -20,12 +20,13 @@ from config import (
 )
 
 
-def test_whisper(audio_path: Path) -> Dict[str, Any]:
+def test_transcription(audio_path: Path, model_name: str) -> Dict[str, Any]:
     """
-    Test Whisper model using simple file upload.
+    Test transcription models using audio transcriptions API.
 
     Args:
         audio_path: Path to audio file
+        model_name: Name of the model to test
 
     Returns:
         Dictionary containing test results with keys:
@@ -35,26 +36,26 @@ def test_whisper(audio_path: Path) -> Dict[str, Any]:
         - success: Boolean indicating success
         - error: Error message (if failed)
     """
-    print("🎤 Testing Whisper...")
+    print(f"🎤 Testing {model_name}...")
 
     with open(audio_path, "rb") as f:
         files = {"file": f}
         headers = {"api-key": AZURE_API_KEY}
 
         start = time.time()
-        response = requests.post(MODELS["whisper"]["url"], headers=headers, files=files)
+        response = requests.post(MODELS[model_name]["url"], headers=headers, files=files)
         latency = time.time() - start
 
     if response.ok:
         return {
-            "model": "whisper",
+            "model": model_name,
             "transcript": response.json().get("text", ""),
             "latency": latency,
             "success": True
         }
     else:
         return {
-            "model": "whisper",
+            "model": model_name,
             "error": response.text,
             "success": False
         }

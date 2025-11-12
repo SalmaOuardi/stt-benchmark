@@ -14,24 +14,14 @@ load_dotenv()
 AZURE_API_KEY = os.getenv("AZURE_API_KEY")
 AZURE_ENDPOINT = os.getenv("AZURE_ENDPOINT", "https://draftspeechtotext.cognitiveservices.azure.com")
 
-# Data directories - supports multiple subdirectories
-# Searches in all "processed" folders under the data root
+# Data directories - using only data/off/processed
 DATA_ROOT_BASE = Path(os.getenv("AUDIO_DATA_DIR", "data")).expanduser()
 
-# Automatically discover all processed directories
-DATA_ROOTS = []
-if DATA_ROOT_BASE.exists():
-    # Look for all "processed" subdirectories
-    for processed_dir in DATA_ROOT_BASE.rglob("processed"):
-        if processed_dir.is_dir():
-            DATA_ROOTS.append(processed_dir)
-
-# Fallback to single directory if specified explicitly or no processed dirs found
-if not DATA_ROOTS:
-    DATA_ROOTS = [DATA_ROOT_BASE / "processed"]
+# Use only data/off/processed directory
+DATA_ROOTS = [DATA_ROOT_BASE / "off" / "processed"]
 
 # For backward compatibility, keep DATA_ROOT as the first directory
-DATA_ROOT = DATA_ROOTS[0] if DATA_ROOTS else DATA_ROOT_BASE / "processed"
+DATA_ROOT = DATA_ROOTS[0]
 
 # Validate required configuration
 if not AZURE_API_KEY:
@@ -41,12 +31,6 @@ if not AZURE_API_KEY:
 
 # Azure speech models and their target endpoints
 MODELS = {
-    "whisper": {
-        "url": f"{AZURE_ENDPOINT}/openai/deployments/whisper/audio/translations?api-version=2024-06-01",
-        "type": "whisper",
-        "deployment": "whisper",
-        "api_version": "2024-06-01",
-    },
     "gpt-audio": {
         "url": f"{AZURE_ENDPOINT}/openai/deployments/gpt-audio/chat/completions?api-version=2025-01-01-preview",
         "deployment": "gpt-audio",
@@ -60,16 +44,16 @@ MODELS = {
         "api_version": "2025-01-01-preview",
     },
     "gpt-4o-transcribe": {
-        "url": f"{AZURE_ENDPOINT}/openai/deployments/gpt-4o-transcribe/chat/completions?api-version=2025-01-01-preview",
+        "url": f"{AZURE_ENDPOINT}/openai/deployments/gpt-4o-transcribe/audio/transcriptions?api-version=2025-03-01-preview",
         "deployment": "gpt-4o-transcribe",
-        "type": "chat",
-        "api_version": "2025-01-01-preview",
+        "type": "transcription",
+        "api_version": "2025-03-01-preview",
     },
     "gpt-4o-mini-transcribe": {
-        "url": f"{AZURE_ENDPOINT}/openai/deployments/gpt-4o-mini-transcribe/chat/completions?api-version=2025-01-01-preview",
+        "url": f"{AZURE_ENDPOINT}/openai/deployments/gpt-4o-mini-transcribe/audio/transcriptions?api-version=2025-03-01-preview",
         "deployment": "gpt-4o-mini-transcribe",
-        "type": "chat",
-        "api_version": "2025-01-01-preview",
+        "type": "transcription",
+        "api_version": "2025-03-01-preview",
     },
     "gpt-4o-audio-preview": {
         "url": f"{AZURE_ENDPOINT}/openai/deployments/gpt-4o-audio-preview/chat/completions?api-version=2025-01-01-preview",
@@ -99,5 +83,5 @@ RATE_LIMIT_DELAY = 1
 MISTRAL_DEPLOYMENT = "mistral-small-2503"
 MISTRAL_ENDPOINT = f"{AZURE_ENDPOINT}/openai/deployments/{MISTRAL_DEPLOYMENT}/chat/completions?api-version=2024-05-01-preview"
 
-# Enable LLM-based normalization for more accurate WER calculation
-USE_LLM_NORMALIZATION = os.getenv("USE_LLM_NORMALIZATION", "true").lower() == "true"
+# Disable LLM-based normalization - calculate WER using raw transcripts and references
+USE_LLM_NORMALIZATION = False

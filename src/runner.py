@@ -8,8 +8,8 @@ import time
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
-from config import ACTIVE_MODELS, RATE_LIMIT_DELAY
-from transcription import test_gpt_audio
+from config import ACTIVE_MODELS, RATE_LIMIT_DELAY, MODELS
+from transcription import test_gpt_audio, test_transcription
 from metrics import calculate_wer, summarize_errors, add_normalized_metrics
 
 
@@ -38,8 +38,12 @@ def test_all_models(audio_path: Path, reference_text: Optional[str]) -> List[Dic
     results = []
 
     for model in ACTIVE_MODELS:
-        # Run transcription test
-        result = test_gpt_audio(audio_path, model)
+        # Run transcription test - use appropriate function based on model type
+        model_type = MODELS[model].get("type", "chat")
+        if model_type == "transcription":
+            result = test_transcription(audio_path, model)
+        else:
+            result = test_gpt_audio(audio_path, model)
 
         # Add metrics if successful and we have a reference
         if result["success"] and reference_text:
