@@ -19,19 +19,36 @@ A professional benchmarking framework for evaluating Azure OpenAI speech-to-text
 ```
 .
 ├── data/
-│   └── off/processed/        # Official test audio samples and references
+│   ├── mine/processed/       # User-created test samples (not used)
+│   └── off/processed/        # Official test audio samples
+│       ├── audio_clean.wav
+│       ├── audio_clean_reference.txt
+│       ├── audio_noisy.wav
+│       └── audio_noisy_reference.txt
 ├── reports/                  # Generated benchmark reports
+│   ├── stt_report.md
+│   └── stt_report_normalized.md
+├── scripts/
+│   └── convert_audio.sh      # Audio conversion utility
 ├── src/                      # Source code (modular architecture)
+│   ├── __init__.py
 │   ├── config.py             # Configuration and model definitions
 │   ├── test_discovery.py     # Test case discovery and filtering
 │   ├── transcription.py      # API communication for both chat and transcription models
 │   ├── metrics.py            # WER calculation and error analysis
+│   ├── llm_normalization.py  # LLM normalization (disabled)
 │   ├── reporting.py          # Comprehensive benchmark report generation
 │   ├── runner.py             # Test orchestration
 │   └── main.py               # Main entry point with CLI
+├── tests/                    # Test files
+├── logs/                     # Application logs
 ├── .env                      # Environment variables (not in git)
+├── .env.example              # Environment variables template
 ├── pyproject.toml            # Project dependencies and metadata
-└── README.md                 # This file
+├── uv.lock                   # UV lock file
+├── README.md                 # This file
+├── ARCHITECTURE.md           # Architecture documentation
+└── MODULE_DEPENDENCIES.md    # Module dependencies
 ```
 
 ## Quick Start
@@ -65,7 +82,7 @@ A professional benchmarking framework for evaluating Azure OpenAI speech-to-text
    ```bash
    AZURE_API_KEY=your_azure_openai_api_key
    AZURE_ENDPOINT=https://your-resource.cognitiveservices.azure.com
-   AUDIO_DATA_DIR=data/processed  # Optional: defaults to data/processed
+   # Note: AUDIO_DATA_DIR is not needed - hardcoded to data/off/processed
    ```
 
 4. **Prepare your dataset:**
@@ -187,20 +204,31 @@ Import and use individual modules in your own scripts:
 from src.config import ACTIVE_MODELS
 from src.test_discovery import discover_test_cases
 from src.runner import test_all_models
-from src.reporting import print_results
+from src.reporting import print_results, generate_report
 
-# Discover test cases
+# Discover test cases (returns list of (audio_path, reference_path) tuples)
 cases = discover_test_cases()
 
-# Run benchmarks
+# Prepare test cases with reference text
+test_cases = []
 all_results = []
+
 for audio_path, ref_path in cases:
-    reference = ref_path.read_text().strip()
-    results = test_all_models(audio_path, reference)
-    all_results.append(results)
+    if ref_path:
+        reference = ref_path.read_text(encoding='utf-8').strip()
+        test_cases.append({
+            'audio_path': audio_path,
+            'reference_path': ref_path,
+            'reference_text': reference
+        })
+        results = test_all_models(audio_path, reference)
+        all_results.append(results)
 
 # Display results
 print_results(all_results)
+
+# Generate markdown report
+generate_report(test_cases, all_results)
 ```
 
 ### Custom Metrics
@@ -224,10 +252,18 @@ def calculate_custom_metric(reference: str, hypothesis: str) -> float:
 
 ### Reference Transcripts
 
-- **Format:** Plain text (.txt)
+- **Format:** Plain text (.txt) with UTF-8 encoding
 - **Naming:** Must match audio file with `_reference` suffix (e.g., `audio_clean_reference.txt`)
 - **Content:** Exact transcription of the audio file
-- **Location:** Same directory as audio files
+- **Location:** Same directory as audio files (`data/off/processed/`)
+
+### Current Test Dataset
+
+The framework currently uses 2 audio samples:
+- `audio_clean.wav` - Clean audio recording
+- `audio_noisy.wav` - Noisy audio recording
+
+Both with corresponding reference files for WER calculation.
 
 ## Architecture
 
@@ -248,7 +284,7 @@ The project uses a modular architecture for maintainability and extensibility:
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `AZURE_API_KEY` | Yes | – | Your Azure OpenAI API key |
-| `AZURE_ENDPOINT` | No | `https://draftspeechtotext...` | Azure OpenAI endpoint URL |
+| `AZURE_ENDPOINT` | No | `https://draftspeechtotext.cognitiveservices.azure.com` | Azure OpenAI endpoint URL |
 
 ### Model Configuration
 
@@ -301,10 +337,10 @@ Measures API response time from request to completion (in seconds).
 Ensure your `.env` file exists and contains valid Azure credentials.
 
 ### "Audio data directory not found"
-Verify the `AUDIO_DATA_DIR` path exists and contains audio files.
+The framework is configured to use `data/off/processed/`. Ensure this directory exists and contains your audio files.
 
 ### "Reference file missing"
-Each `audio_*.wav` file must have a corresponding `*_reference.txt` file with the same base name.
+Each `audio_*.wav` file must have a corresponding `audio_*_reference.txt` file with the same base name (e.g., `audio_clean.wav` → `audio_clean_reference.txt`).
 
 ### Import Errors
 Activate your virtual environment:
