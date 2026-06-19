@@ -65,22 +65,20 @@ def run_benchmark(audio_selections: List[str] = None, skip_report: bool = False)
         all_results.append(results)
 
         # Store test case info for reporting
-        test_cases.append({
-            "audio_path": audio_path,
-            "reference_path": reference_path,
-            "reference_text": reference_text
-        })
+        test_cases.append(
+            {
+                "audio_path": audio_path,
+                "reference_path": reference_path,
+                "reference_text": reference_text,
+            }
+        )
 
     # Display and save results
     if all_results:
         print_results(all_results)
 
         if not skip_report:
-            generate_report(
-                test_cases,
-                all_results,
-                output_path="reports/stt_report_normalized.md"
-            )
+            generate_report(test_cases, all_results, output_path="reports/stt_report_normalized.md")
 
     print(
         "\nℹ️  GPT Realtime testing is not automated because the realtime API "

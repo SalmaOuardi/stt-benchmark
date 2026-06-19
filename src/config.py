@@ -12,7 +12,9 @@ load_dotenv()
 
 # Azure OpenAI configuration
 AZURE_API_KEY = os.getenv("AZURE_API_KEY")
-AZURE_ENDPOINT = os.getenv("AZURE_ENDPOINT", "https://draftspeechtotext.cognitiveservices.azure.com")
+AZURE_ENDPOINT = os.getenv(
+    "AZURE_ENDPOINT", "https://draftspeechtotext.cognitiveservices.azure.com"
+)
 
 # Data directories - using only data/off/processed
 DATA_ROOT_BASE = Path(os.getenv("AUDIO_DATA_DIR", "data")).expanduser()
@@ -60,7 +62,7 @@ MODELS = {
         "deployment": "gpt-4o-audio-preview",
         "type": "chat",
         "api_version": "2025-01-01-preview",
-    }
+    },
 }
 
 # Active models to test

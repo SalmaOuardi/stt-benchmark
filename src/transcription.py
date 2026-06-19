@@ -12,12 +12,7 @@ from typing import Dict, Any
 import requests
 from openai import AzureOpenAI
 
-from config import (
-    AZURE_API_KEY,
-    AZURE_ENDPOINT,
-    MODELS,
-    TRANSCRIPTION_PROMPT
-)
+from config import AZURE_API_KEY, AZURE_ENDPOINT, MODELS, TRANSCRIPTION_PROMPT
 
 
 def test_transcription(audio_path: Path, model_name: str) -> Dict[str, Any]:
@@ -51,14 +46,10 @@ def test_transcription(audio_path: Path, model_name: str) -> Dict[str, Any]:
             "model": model_name,
             "transcript": response.json().get("text", ""),
             "latency": latency,
-            "success": True
+            "success": True,
         }
     else:
-        return {
-            "model": model_name,
-            "error": response.text,
-            "success": False
-        }
+        return {"model": model_name, "error": response.text, "success": False}
 
 
 def test_gpt_audio(audio_path: Path, model_name: str) -> Dict[str, Any]:
@@ -82,7 +73,7 @@ def test_gpt_audio(audio_path: Path, model_name: str) -> Dict[str, Any]:
     client = AzureOpenAI(
         api_key=AZURE_API_KEY,
         api_version=MODELS[model_name]["api_version"],
-        azure_endpoint=AZURE_ENDPOINT
+        azure_endpoint=AZURE_ENDPOINT,
     )
 
     # Encode audio to base64
@@ -90,7 +81,11 @@ def test_gpt_audio(audio_path: Path, model_name: str) -> Dict[str, Any]:
         audio_b64 = base64.b64encode(f.read()).decode()
 
     # Determine audio format
-    audio_suffix = audio_path.suffix.lower() if isinstance(audio_path, Path) else os.path.splitext(audio_path)[1].lower()
+    audio_suffix = (
+        audio_path.suffix.lower()
+        if isinstance(audio_path, Path)
+        else os.path.splitext(audio_path)[1].lower()
+    )
     audio_format = "wav" if audio_suffix == ".wav" else "mp3"
 
     try:
@@ -99,19 +94,18 @@ def test_gpt_audio(audio_path: Path, model_name: str) -> Dict[str, Any]:
             model=MODELS[model_name]["deployment"],
             modalities=["text"],
             audio={"voice": "alloy", "format": audio_format},
-            messages=[{
-                "role": "user",
-                "content": [
-                    {
-                        "type": "input_audio",
-                        "input_audio": {"data": audio_b64, "format": audio_format}
-                    },
-                    {
-                        "type": "text",
-                        "text": TRANSCRIPTION_PROMPT
-                    }
-                ]
-            }]
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "input_audio",
+                            "input_audio": {"data": audio_b64, "format": audio_format},
+                        },
+                        {"type": "text", "text": TRANSCRIPTION_PROMPT},
+                    ],
+                }
+            ],
         )
         latency = time.time() - start
 
@@ -119,11 +113,7 @@ def test_gpt_audio(audio_path: Path, model_name: str) -> Dict[str, Any]:
             "model": model_name,
             "transcript": response.choices[0].message.content,
             "latency": latency,
-            "success": True
+            "success": True,
         }
     except Exception as e:
-        return {
-            "model": model_name,
-            "error": str(e),
-            "success": False
-        }
+        return {"model": model_name, "error": str(e), "success": False}
