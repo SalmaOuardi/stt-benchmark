@@ -6,8 +6,6 @@ Handles console output and markdown report generation.
 from pathlib import Path
 from typing import List, Dict, Any
 
-from metrics import summarize_errors
-
 
 def print_results(all_results: List[List[Dict[str, Any]]]) -> None:
     """
@@ -18,7 +16,7 @@ def print_results(all_results: List[List[Dict[str, Any]]]) -> None:
     """
     print(f"\n{'='*80}")
     print("📊 BENCHMARK RESULTS - MODEL COMPARISON")
-    print('='*80)
+    print("=" * 80)
 
     # Aggregate stats
     stats = {}
@@ -33,7 +31,7 @@ def print_results(all_results: List[List[Dict[str, Any]]]) -> None:
                     "latencies": [],
                     "errors": {"substitutions": 0, "insertions": 0, "deletions": 0},
                     "success": 0,
-                    "failed": 0
+                    "failed": 0,
                 }
 
             if not r["success"]:
@@ -57,10 +55,13 @@ def print_results(all_results: List[List[Dict[str, Any]]]) -> None:
     # Print comprehensive table
     if has_wer_data:
         print(f"\n{'Model':<25} {'Avg WER':<10} {'Latency':<12} {'Errors':<10} {'Status':<10}")
-        print('-'*80)
+        print("-" * 80)
 
         # Sort by WER
-        sorted_models = sorted(stats.items(), key=lambda x: sum(x[1]["wers"])/len(x[1]["wers"]) if x[1]["wers"] else float('inf'))
+        sorted_models = sorted(
+            stats.items(),
+            key=lambda x: sum(x[1]["wers"]) / len(x[1]["wers"]) if x[1]["wers"] else float("inf"),
+        )
 
         for model, data in sorted_models:
             if data["wers"]:
@@ -71,27 +72,37 @@ def print_results(all_results: List[List[Dict[str, Any]]]) -> None:
 
             avg_lat = sum(data["latencies"]) / len(data["latencies"]) if data["latencies"] else 0
             total_errors = sum(data["errors"].values())
-            status = f"✅ {data['success']}" if data["failed"] == 0 else f"⚠️ {data['success']}/{data['success']+data['failed']}"
+            status = (
+                f"✅ {data['success']}"
+                if data["failed"] == 0
+                else f"⚠️ {data['success']}/{data['success']+data['failed']}"
+            )
 
-            print(f"{model:<25} {wer_display:<10} {avg_lat:>6.2f}s    {total_errors:<10} {status:<10}")
+            print(
+                f"{model:<25} {wer_display:<10} {avg_lat:>6.2f}s    {total_errors:<10} {status:<10}"
+            )
 
         # Find winner (only if we have WER data)
         models_with_wer = {m: d for m, d in stats.items() if d["wers"]}
         if models_with_wer:
-            winner_model, winner_data = min(models_with_wer.items(), key=lambda x: sum(x[1]["wers"])/len(x[1]["wers"]))
+            winner_model, winner_data = min(
+                models_with_wer.items(), key=lambda x: sum(x[1]["wers"]) / len(x[1]["wers"])
+            )
             winner_wer = sum(winner_data["wers"]) / len(winner_data["wers"])
             print(f"\n{'='*80}")
             print(f"🏆 BEST MODEL: {winner_model}")
             print(f"   Average WER: {winner_wer:.2f}%")
-            print(f"   Average Latency: {sum(winner_data['latencies'])/len(winner_data['latencies']):.2f}s")
+            print(
+                f"   Average Latency: {sum(winner_data['latencies'])/len(winner_data['latencies']):.2f}s"
+            )
             print(f"   Total Errors: {sum(winner_data['errors'].values())}")
-            print('='*80)
+            print("=" * 80)
 
         print("\nℹ️  WER calculated without normalization (raw comparison)")
     else:
         # Transcription-only mode
         print(f"\n{'Model':<30} {'Avg Latency':<15}")
-        print('-'*60)
+        print("-" * 60)
 
         for model, data in sorted(stats.items()):
             avg_lat = sum(data["latencies"]) / len(data["latencies"]) if data["latencies"] else 0
@@ -103,7 +114,7 @@ def print_results(all_results: List[List[Dict[str, Any]]]) -> None:
 def generate_report(
     test_cases: List[Dict[str, Any]],
     all_results: List[List[Dict[str, Any]]],
-    output_path: str = "reports/stt_report.md"
+    output_path: str = "reports/stt_report.md",
 ) -> None:
     """
     Create detailed markdown reports.
@@ -141,13 +152,13 @@ def generate_report(
     # Generate transcription report if there are transcription-only cases
     if transcription_cases:
         transcription_path = str(report_path).replace(".md", "_transcriptions.md")
-        _generate_transcription_report(transcription_cases, transcription_results, transcription_path)
+        _generate_transcription_report(
+            transcription_cases, transcription_results, transcription_path
+        )
 
 
 def _generate_evaluation_report(
-    test_cases: List[Dict[str, Any]],
-    all_results: List[List[Dict[str, Any]]],
-    output_path: str
+    test_cases: List[Dict[str, Any]], all_results: List[List[Dict[str, Any]]], output_path: str
 ) -> None:
     """Generate comprehensive benchmark evaluation report with WER metrics."""
     report_path = Path(output_path)
@@ -158,10 +169,10 @@ def _generate_evaluation_report(
     lines.append("")
     lines.append("## Executive Summary")
     lines.append("")
-    lines.append(f"**Test Configuration:**")
+    lines.append("**Test Configuration:**")
     lines.append(f"- Number of audio samples: {len(test_cases)}")
-    lines.append(f"- Evaluation metric: Word Error Rate (WER)")
-    lines.append(f"- Normalization: Disabled (raw WER calculation)")
+    lines.append("- Evaluation metric: Word Error Rate (WER)")
+    lines.append("- Normalization: Disabled (raw WER calculation)")
     lines.append("")
 
     # Calculate aggregate statistics
@@ -176,7 +187,7 @@ def _generate_evaluation_report(
                     "wers": [],
                     "latencies": [],
                     "total_errors": {"substitutions": 0, "insertions": 0, "deletions": 0},
-                    "success_count": 0
+                    "success_count": 0,
                 }
 
             model_stats[model]["wers"].append(r.get("wer", 0))
@@ -194,7 +205,10 @@ def _generate_evaluation_report(
     lines.append("| Model | Avg WER | Min WER | Max WER | Avg Latency | Total Errors | Status |")
     lines.append("|-------|---------|---------|---------|-------------|--------------|--------|")
 
-    sorted_models = sorted(model_stats.items(), key=lambda x: sum(x[1]["wers"])/len(x[1]["wers"]) if x[1]["wers"] else float('inf'))
+    sorted_models = sorted(
+        model_stats.items(),
+        key=lambda x: sum(x[1]["wers"]) / len(x[1]["wers"]) if x[1]["wers"] else float("inf"),
+    )
 
     for model, stats in sorted_models:
         if stats["wers"]:
@@ -208,7 +222,9 @@ def _generate_evaluation_report(
         total_errors = sum(stats["total_errors"].values())
         status = "✅" if stats["success_count"] == len(test_cases) else "⚠️"
 
-        lines.append(f"| {model} | {avg_wer:.2f}% | {min_wer:.2f}% | {max_wer:.2f}% | {avg_latency:.2f}s | {total_errors} | {status} |")
+        lines.append(
+            f"| {model} | {avg_wer:.2f}% | {min_wer:.2f}% | {max_wer:.2f}% | {avg_latency:.2f}s | {total_errors} | {status} |"
+        )
 
     lines.append("")
 
@@ -218,7 +234,9 @@ def _generate_evaluation_report(
         winner_avg_wer = sum(winner_stats["wers"]) / len(winner_stats["wers"])
         lines.append(f"### 🏆 Best Model: **{winner_model}**")
         lines.append(f"- Average WER: **{winner_avg_wer:.2f}%**")
-        lines.append(f"- Average Latency: **{sum(winner_stats['latencies'])/len(winner_stats['latencies']):.2f}s**")
+        lines.append(
+            f"- Average Latency: **{sum(winner_stats['latencies'])/len(winner_stats['latencies']):.2f}s**"
+        )
         lines.append(f"- Total Errors: **{sum(winner_stats['total_errors'].values())}**")
         lines.append("")
 
@@ -231,7 +249,9 @@ def _generate_evaluation_report(
     for model, stats in sorted_models:
         errors = stats["total_errors"]
         total = sum(errors.values())
-        lines.append(f"| {model} | {errors['substitutions']} | {errors['insertions']} | {errors['deletions']} | {total} |")
+        lines.append(
+            f"| {model} | {errors['substitutions']} | {errors['insertions']} | {errors['deletions']} | {total} |"
+        )
 
     lines.append("")
     lines.append("---")
@@ -239,17 +259,17 @@ def _generate_evaluation_report(
     lines.append("## Detailed Results by Audio Sample")
     lines.append("")
 
-    for (case, results) in zip(test_cases, all_results):
+    for case, results in zip(test_cases, all_results):
         audio_path = case["audio_path"]
         reference_path = case["reference_path"]
         reference_text = case["reference_text"]
 
         lines.append(f"### Audio Sample: {audio_path.name}")
         lines.append("")
-        lines.append(f"**Reference Text:**")
+        lines.append("**Reference Text:**")
         lines.append(f"> {reference_text}")
         lines.append("")
-        lines.append(f"**File Paths:**")
+        lines.append("**File Paths:**")
         lines.append(f"- Audio: `{audio_path}`")
         lines.append(f"- Reference: `{reference_path}`")
         lines.append("")
@@ -273,7 +293,9 @@ def _generate_evaluation_report(
                 ins = errors.get("insertions", 0)
                 dels = errors.get("deletions", 0)
 
-                lines.append(f"| {model_name} | {wer_value:.2f}% | {latency:.2f}s | {sub} | {ins} | {dels} | ✅ |")
+                lines.append(
+                    f"| {model_name} | {wer_value:.2f}% | {latency:.2f}s | {sub} | {ins} | {dels} | ✅ |"
+                )
 
         lines.append("")
 
@@ -293,10 +315,10 @@ def _generate_evaluation_report(
             transcript_text = result["transcript"]
             details = result.get("error_details", [])
 
-            lines.append(f"**Transcript:**")
-            lines.append(f"```")
+            lines.append("**Transcript:**")
+            lines.append("```")
             lines.append(transcript_text)
-            lines.append(f"```")
+            lines.append("```")
             lines.append("")
 
             # Error details
@@ -320,9 +342,7 @@ def _generate_evaluation_report(
 
 
 def _generate_transcription_report(
-    test_cases: List[Dict[str, Any]],
-    all_results: List[List[Dict[str, Any]]],
-    output_path: str
+    test_cases: List[Dict[str, Any]], all_results: List[List[Dict[str, Any]]], output_path: str
 ) -> None:
     """Generate transcription-only report without WER metrics."""
     report_path = Path(output_path)
@@ -333,7 +353,7 @@ def _generate_transcription_report(
     lines.append("")
     lines.append(f"Generated from {len(test_cases)} audio samples without reference transcripts.\n")
 
-    for (case, results) in zip(test_cases, all_results):
+    for case, results in zip(test_cases, all_results):
         audio_path = case["audio_path"]
 
         lines.append(f"## {audio_path.name}")
@@ -345,19 +365,19 @@ def _generate_transcription_report(
             lines.append(f"### Model: {model_name}")
 
             if not result["success"]:
-                lines.append(f"- Status: ❌ Failed")
+                lines.append("- Status: ❌ Failed")
                 lines.append(f"- Error: `{result['error']}`\n")
                 continue
 
             transcript_text = result["transcript"]
             latency = result.get("latency")
 
-            lines.append(f"- Status: ✅ Success")
+            lines.append("- Status: ✅ Success")
             lines.append(f"- Latency: {latency:.2f}s")
-            lines.append(f"- **Transcript:**")
-            lines.append(f"```")
+            lines.append("- **Transcript:**")
+            lines.append("```")
             lines.append(transcript_text)
-            lines.append(f"```")
+            lines.append("```")
             lines.append("")
 
         lines.append("---\n")

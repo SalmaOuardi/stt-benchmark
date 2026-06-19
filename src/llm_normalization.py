@@ -5,7 +5,7 @@ equivalent variations as the same while preserving real transcription errors.
 """
 
 import requests
-from typing import Dict, Tuple
+from typing import Tuple
 import json
 
 
@@ -13,7 +13,7 @@ def normalize_with_llm(
     reference: str,
     hypothesis: str,
     api_key: str,
-    endpoint: str = "https://draftspeechtotext.services.ai.azure.com/models/chat/completions?api-version=2024-05-01-preview"
+    endpoint: str = "https://draftspeechtotext.services.ai.azure.com/models/chat/completions?api-version=2024-05-01-preview",
 ) -> Tuple[str, str]:
     """
     Use LLM to intelligently normalize both reference and hypothesis texts.
@@ -87,20 +87,12 @@ Return ONLY a JSON object (no markdown, no extra text):
     "normalized_hypothesis": "the normalized text"
 }}"""
 
-    headers = {
-        "Content-Type": "application/json",
-        "api-key": api_key
-    }
+    headers = {"Content-Type": "application/json", "api-key": api_key}
 
     payload = {
-        "messages": [
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
+        "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.0,
-        "max_tokens": 2000
+        "max_tokens": 2000,
     }
 
     try:
@@ -119,10 +111,7 @@ Return ONLY a JSON object (no markdown, no extra text):
 
         normalized = json.loads(content)
 
-        return (
-            normalized["normalized_reference"],
-            normalized["normalized_hypothesis"]
-        )
+        return (normalized["normalized_reference"], normalized["normalized_hypothesis"])
 
     except Exception as e:
         # Fallback to basic normalization if LLM fails
@@ -146,12 +135,12 @@ def basic_normalize(text: str) -> str:
     text = text.lower()
 
     # Remove punctuation
-    text = re.sub(r'[.,;:!?]', '', text)
+    text = re.sub(r"[.,;:!?]", "", text)
 
     # Normalize apostrophes
     text = text.replace("'", "'").replace("'", "'")
 
     # Normalize whitespace
-    text = ' '.join(text.split())
+    text = " ".join(text.split())
 
     return text

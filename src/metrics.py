@@ -8,9 +8,6 @@ from typing import Dict, List, Tuple
 
 from jiwer import wer
 
-import config
-from llm_normalization import normalize_with_llm
-
 
 def normalize_text(text: str) -> str:
     """
@@ -40,8 +37,7 @@ def calculate_wer(reference: str, hypothesis: str) -> float:
 
 
 def summarize_errors(
-    reference: str,
-    hypothesis: str
+    reference: str, hypothesis: str
 ) -> Tuple[Dict[str, int], List[Dict[str, str]]]:
     """
     Analyze and summarize token-level errors between reference and hypothesis.
@@ -72,15 +68,11 @@ def summarize_errors(
         if tag == "replace":
             summary["substitutions"] += max(i2 - i1, j2 - j1)
         elif tag == "delete":
-            summary["deletions"] += (i2 - i1)
+            summary["deletions"] += i2 - i1
         elif tag == "insert":
-            summary["insertions"] += (j2 - j1)
+            summary["insertions"] += j2 - j1
 
-        details.append({
-            "type": tag,
-            "expected": ref_segment,
-            "actual": hyp_segment
-        })
+        details.append({"type": tag, "expected": ref_segment, "actual": hyp_segment})
 
     return summary, details
 
@@ -100,6 +92,11 @@ def add_normalized_metrics(result: Dict, reference_text: str) -> Dict:
     Returns:
         Updated result dictionary with normalized metrics as primary WER
     """
+    # Imported lazily so the pure metric functions above stay importable
+    # without requiring API configuration.
+    import config
+    from llm_normalization import normalize_with_llm
+
     if not result.get("success"):
         return result
 
@@ -112,10 +109,7 @@ def add_normalized_metrics(result: Dict, reference_text: str) -> Dict:
     if config.USE_LLM_NORMALIZATION:
         try:
             normalized_reference, normalized_transcript = normalize_with_llm(
-                reference_text,
-                result["transcript"],
-                config.AZURE_API_KEY,
-                config.MISTRAL_ENDPOINT
+                reference_text, result["transcript"], config.AZURE_API_KEY, config.MISTRAL_ENDPOINT
             )
         except Exception as e:
             print(f"⚠️  LLM normalization failed, using basic normalization: {e}")
@@ -128,8 +122,7 @@ def add_normalized_metrics(result: Dict, reference_text: str) -> Dict:
     # Calculate the meaningful WER
     meaningful_wer = calculate_wer(normalized_reference, normalized_transcript)
     meaningful_errors, meaningful_error_details = summarize_errors(
-        normalized_reference,
-        normalized_transcript
+        normalized_reference, normalized_transcript
     )
 
     # Replace primary WER with meaningful WER

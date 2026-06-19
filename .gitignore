@@ -22,4 +22,4 @@ coverage.xml
 *.cover
 
 # anything else
-.claude
+.claude.DS_Store

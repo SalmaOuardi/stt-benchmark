@@ -33,7 +33,7 @@ def test_all_models(audio_path: Path, reference_text: Optional[str]) -> List[Dic
         print(f"Reference: {reference_text[:100]}...")
     else:
         print("Mode: Transcription only (no reference)")
-    print('='*60)
+    print("=" * 60)
 
     results = []
 
@@ -50,8 +50,7 @@ def test_all_models(audio_path: Path, reference_text: Optional[str]) -> List[Dic
             # Calculate basic WER and errors
             result["wer"] = calculate_wer(reference_text, result["transcript"])
             result["errors"], result["error_details"] = summarize_errors(
-                reference_text,
-                result["transcript"]
+                reference_text, result["transcript"]
             )
 
             # Add normalized metrics

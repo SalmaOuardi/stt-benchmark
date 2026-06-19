@@ -107,11 +107,13 @@ def _case_keys(audio_path: Path, reference_path: Optional[Path]) -> Set[str]:
     }
 
     if reference_path:
-        keys.update({
-            reference_path.name.lower(),
-            reference_path.stem.lower(),
-            str(reference_path).lower(),
-        })
+        keys.update(
+            {
+                reference_path.name.lower(),
+                reference_path.stem.lower(),
+                str(reference_path).lower(),
+            }
+        )
 
         for stem in (audio_path.stem, reference_path.stem):
             parts = stem.lower().split("_")
@@ -126,8 +128,7 @@ def _case_keys(audio_path: Path, reference_path: Optional[Path]) -> Set[str]:
 
 
 def filter_test_cases(
-    cases: List[Tuple[Path, Optional[Path]]],
-    selections: List[str]
+    cases: List[Tuple[Path, Optional[Path]]], selections: List[str]
 ) -> Tuple[List[Tuple[Path, Optional[Path]]], List[str]]:
     """
     Filter discovered cases based on user selections.
